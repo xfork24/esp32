@@ -48,3 +48,7 @@ Thumbs.db
 *.mov
 *.wmv
 
+esp32.code-workspace
+*/build
+*/managed_components
+*/dependencies.lock
