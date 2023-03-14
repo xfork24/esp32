@@ -8,8 +8,8 @@ Width = 20
 
 class LCD:
     # initializes objects and lcd
-    def __init__(self, addr, scl_pin, sda_pin):
-        self.i2c = machine.SoftI2C(scl=machine.Pin(scl_pin), sda=machine.Pin(sda_pin))
+    def __init__(self, addr, scl, sda):
+        self.i2c = machine.SoftI2C(scl=machine.Pin(scl), sda=machine.Pin(sda))
         self.address = addr
         self.bk_light = 0x08  # Set Backlight ON
         self.lcd_write(0x03)
