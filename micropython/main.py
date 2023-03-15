@@ -19,10 +19,21 @@ def main():
     mqtt.set_callback(sub_cb)
     mqtt.connect()
     mqtt.subscribe(MQTT_ESP32_SUBSCRIBE_TOPIC)
+    count = 0
     while True:
+        count += 1
+        if count % 10 == 0:
+            print('checking mqtt message, count = {0}, will try connect again'.format(count))
+            try:
+                mqtt.disconnect()
+            except Exception as e:
+                print(e)
+            mqtt.connect()
+            mqtt.subscribe(MQTT_ESP32_SUBSCRIBE_TOPIC)
         mqtt.check_msg()
         time.sleep(1)
 
 
 if __name__ == '__main__':
     main()
+
