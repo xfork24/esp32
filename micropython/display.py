@@ -17,8 +17,8 @@ def clean_lcd(lcd):
     lcd.lcd_backlight(False)
 
 
-def init_oled(width=128, height=64, res=21, dc=22, cs=23, sck=18, mosi=19, miso=15):
-    spi = SoftSPI(baudrate=500000, polarity=1, phase=0, sck=Pin(sck), mosi=Pin(mosi), miso=Pin(miso))
+def init_oled(width=128, height=64, res=21, dc=22, cs=23, clk=18, mosi=19, miso=15):  # d0 = clk, d1 = mosi
+    spi = SoftSPI(baudrate=500000, polarity=1, phase=0, sck=Pin(clk), mosi=Pin(mosi), miso=Pin(miso))
     res_pin = Pin(res)
     dc_pin = Pin(dc)
     cs_pin = Pin(cs)
@@ -39,7 +39,8 @@ def display_msg_in_lcd_and_oled(show_time=5):
 
     oled = init_oled()
     oled.text('Wife is always', 0, 0)
-    oled.text('RIGHT!', 16, 0)
+    oled.text('RIGHT!', 0, 16)
+    oled.show()
 
     sleep(show_time)
     clean_lcd(lcd)
