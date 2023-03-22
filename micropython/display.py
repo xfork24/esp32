@@ -5,10 +5,15 @@ from machine import Pin, SoftSPI
 from lcd2004 import LCD
 from ssd1306 import SSD1306_SPI
 
+lcd = None
+oled = None
+
 
 def init_lcd(addr=39, scl=12, sda=13, backlight=False):
-    lcd = LCD(addr, scl, sda)
-    lcd.lcd_backlight(backlight)
+    global lcd
+    if lcd is None:
+        lcd = LCD(addr, scl, sda)
+        lcd.lcd_backlight(backlight)
     return lcd
 
 
@@ -18,12 +23,14 @@ def clean_lcd(lcd):
 
 
 def init_oled(width=128, height=64, res=21, dc=22, cs=23, clk=18, mosi=19, miso=15):  # d0 = clk, d1 = mosi
-    spi = SoftSPI(baudrate=500000, polarity=1, phase=0, sck=Pin(clk), mosi=Pin(mosi), miso=Pin(miso))
-    res_pin = Pin(res)
-    dc_pin = Pin(dc)
-    cs_pin = Pin(cs)
-    oled = SSD1306_SPI(width, height, spi, dc_pin, res_pin, cs_pin)
-    oled.fill(0)
+    global oled
+    if oled is None:
+        spi = SoftSPI(baudrate=500000, polarity=1, phase=0, sck=Pin(clk), mosi=Pin(mosi), miso=Pin(miso))
+        res_pin = Pin(res)
+        dc_pin = Pin(dc)
+        cs_pin = Pin(cs)
+        oled = SSD1306_SPI(width, height, spi, dc_pin, res_pin, cs_pin)
+        oled.fill(0)
     return oled
 
 

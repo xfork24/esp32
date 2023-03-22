@@ -5,6 +5,7 @@ from connect import wifi_connect
 from display import init_lcd
 from display import init_oled
 from qr import QRCode
+from sensor import read_aval
 from umqtt import MQTTClient
 
 lcd = init_lcd()
@@ -57,3 +58,14 @@ def main2():
             y += 1
         x += 1
     oled.show()
+
+
+def main3():
+    oled = init_oled()
+    while True:
+        oled.fill(0)
+        oled.show()
+        val = read_aval()
+        oled.text(str(val), 0, 0)
+        oled.show()
+        time.sleep(0.5)
