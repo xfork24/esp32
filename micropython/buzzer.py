@@ -122,7 +122,7 @@ class Buzzer:
         self.pwm = PWM(Pin(port, Pin.OUT))
 
     def play(self, wait, duty, melody=None):
-        melody = mario if melody is None else melody
+        melody = jingle if melody is None else melody
         for note in melody:
             if note > 0:
                 self.pwm.duty(0)
