@@ -1,5 +1,7 @@
 import time
+
 import network
+
 
 def wifi_connect(essid, passwd):
     wlan = network.WLAN(network.STA_IF)

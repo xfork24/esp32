@@ -1,6 +1,5 @@
 import usocket as socket
 import ustruct as struct
-from ubinascii import hexlify
 
 
 class MQTTException(Exception):
@@ -9,15 +8,15 @@ class MQTTException(Exception):
 
 class MQTTClient:
     def __init__(
-        self,
-        client_id,
-        server,
-        port=0,
-        user=None,
-        password=None,
-        keepalive=60,
-        ssl=False,
-        ssl_params=None,
+            self,
+            client_id,
+            server,
+            port=0,
+            user=None,
+            password=None,
+            keepalive=60,
+            ssl=False,
+            ssl_params=None,
     ):
         if port == 0:
             port = 8883 if ssl else 1883

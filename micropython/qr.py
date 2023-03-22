@@ -5,8 +5,10 @@ Exceptions
 Formerly in exceptions.py
 """
 
+
 class DataOverflowError(Exception):
     pass
+
 
 """
 Constants
@@ -79,8 +81,8 @@ for i in range(8):
 
 for i in range(8, 256):
     EXP_TABLE[i] = (
-        EXP_TABLE[i - 4] ^ EXP_TABLE[i - 5] ^ EXP_TABLE[i - 6] ^
-        EXP_TABLE[i - 8])
+            EXP_TABLE[i - 4] ^ EXP_TABLE[i - 5] ^ EXP_TABLE[i - 6] ^
+            EXP_TABLE[i - 8])
 
 for i in range(255):
     LOG_TABLE[EXP_TABLE[i]] = i
@@ -255,6 +257,7 @@ RS_BLOCK_TABLE = [
     b'\x14-\x0f=.\x10',
 ]
 
+
 def glog(n):
     if n < 1:  # pragma: no cover
         raise ValueError("glog(%s)" % n)
@@ -277,10 +280,10 @@ class Polynomial:
         else:
             offset += 1
         if isinstance(num[offset:], bytes):
-            shift_chunk = b'\x00'*shift
+            shift_chunk = b'\x00' * shift
         elif isinstance(num[offset:], list):
-            shift_chunk = [0]*shift
-        self.num = bytearray(num[offset:]+shift_chunk)
+            shift_chunk = [0] * shift
+        self.num = bytearray(num[offset:] + shift_chunk)
 
     def __getitem__(self, index):
         return self.num[index]
@@ -433,11 +436,11 @@ PATTERN_POSITION_TABLE = [
 ]
 
 G15 = (
-    (1 << 10) | (1 << 8) | (1 << 5) | (1 << 4) | (1 << 2) | (1 << 1) |
-    (1 << 0))
+        (1 << 10) | (1 << 8) | (1 << 5) | (1 << 4) | (1 << 2) | (1 << 1) |
+        (1 << 0))
 G18 = (
-    (1 << 12) | (1 << 11) | (1 << 10) | (1 << 9) | (1 << 8) | (1 << 5) |
-    (1 << 2) | (1 << 0))
+        (1 << 12) | (1 << 11) | (1 << 10) | (1 << 9) | (1 << 8) | (1 << 5) |
+        (1 << 2) | (1 << 0))
 G15_MASK = (1 << 14) | (1 << 12) | (1 << 10) | (1 << 4) | (1 << 1)
 
 PAD0 = 0xEC
@@ -446,18 +449,18 @@ PAD1 = 0x11
 # Precompute bit count limits, indexed by error correction level and code size
 _data_count = lambda block: block.data_count
 BIT_LIMIT_TABLE = [
-    [0] + [8*sum(map(_data_count, make_rs_blocks(version, error_correction)))
+    [0] + [8 * sum(map(_data_count, make_rs_blocks(version, error_correction)))
            for version in range(1, 41)]
     for error_correction in range(4)
 ]
 
 
 def BCH_type_info(data):
-        d = data << 10
-        while BCH_digit(d) - BCH_digit(G15) >= 0:
-            d ^= (G15 << (BCH_digit(d) - BCH_digit(G15)))
+    d = data << 10
+    while BCH_digit(d) - BCH_digit(G15) >= 0:
+        d ^= (G15 << (BCH_digit(d) - BCH_digit(G15)))
 
-        return ((data << 10) | d) ^ G15_MASK
+    return ((data << 10) | d) ^ G15_MASK
 
 
 def BCH_type_number(data):
@@ -483,15 +486,15 @@ def make_mask_func(pattern):
     """
     Return the mask function for the given mask pattern.
     """
-    if pattern == 0:   # 000
+    if pattern == 0:  # 000
         return lambda i, j: (i + j) % 2 == 0
-    if pattern == 1:   # 001
+    if pattern == 1:  # 001
         return lambda i, j: i % 2 == 0
-    if pattern == 2:   # 010
+    if pattern == 2:  # 010
         return lambda i, j: j % 3 == 0
-    if pattern == 3:   # 011
+    if pattern == 3:  # 011
         return lambda i, j: (i + j) % 3 == 0
-    if pattern == 4:   # 100
+    if pattern == 4:  # 100
         return lambda i, j: (int(i / 2) + int(j / 3)) % 2 == 0
     if pattern == 5:  # 101
         return lambda i, j: (i * j) % 2 + (i * j) % 3 == 0
@@ -572,7 +575,7 @@ def _lost_point_level1(modules, modules_count):
             container[length] += 1
 
     lost_point += sum(container[each_length] * (each_length - 2)
-        for each_length in range(5, modules_count + 1))
+                      for each_length in range(5, modules_count + 1))
 
     return lost_point
 
@@ -613,7 +616,7 @@ def _lost_point_level3(modules, modules_count):
     # pattern1:     10111010000
     # pattern2: 00001011101
     modules_range = range(modules_count)
-    modules_range_short = range(modules_count-10)
+    modules_range_short = range(modules_count - 10)
     lost_point = 0
 
     for row in modules_range:
@@ -622,31 +625,31 @@ def _lost_point_level3(modules, modules_count):
         col = 0
         for col in modules_range_short_iter:
             if (
-                        not this_row[col + 1]
+                    not this_row[col + 1]
                     and this_row[col + 4]
                     and not this_row[col + 5]
                     and this_row[col + 6]
                     and not this_row[col + 9]
-                and (
-                        this_row[col + 0]
+                    and (
+                    this_row[col + 0]
                     and this_row[col + 2]
                     and this_row[col + 3]
                     and not this_row[col + 7]
                     and not this_row[col + 8]
                     and not this_row[col + 10]
-                or
-                        not this_row[col + 0]
+                    or
+                    not this_row[col + 0]
                     and not this_row[col + 2]
                     and not this_row[col + 3]
                     and this_row[col + 7]
                     and this_row[col + 8]
                     and this_row[col + 10]
-                    )
-                ):
+            )
+            ):
                 lost_point += 40
-# horspool algorithm.
-# if this_row[col + 10] == True,  pattern1 shift 4, pattern2 shift 2. So min=2.
-# if this_row[col + 10] == False, pattern1 shift 1, pattern2 shift 1. So min=1.
+            # horspool algorithm.
+            # if this_row[col + 10] == True,  pattern1 shift 4, pattern2 shift 2. So min=2.
+            # if this_row[col + 10] == False, pattern1 shift 1, pattern2 shift 1. So min=1.
             if this_row[col + 10]:
                 try:
                     next(modules_range_short_iter)
@@ -658,27 +661,27 @@ def _lost_point_level3(modules, modules_count):
         row = 0
         for row in modules_range_short_iter:
             if (
-                        not modules[row + 1][col]
+                    not modules[row + 1][col]
                     and modules[row + 4][col]
                     and not modules[row + 5][col]
                     and modules[row + 6][col]
                     and not modules[row + 9][col]
-                and (
-                        modules[row + 0][col]
+                    and (
+                    modules[row + 0][col]
                     and modules[row + 2][col]
                     and modules[row + 3][col]
                     and not modules[row + 7][col]
                     and not modules[row + 8][col]
                     and not modules[row + 10][col]
-                or
-                        not modules[row + 0][col]
+                    or
+                    not modules[row + 0][col]
                     and not modules[row + 2][col]
                     and not modules[row + 3][col]
                     and modules[row + 7][col]
                     and modules[row + 8][col]
                     and modules[row + 10][col]
-                    )
-                ):
+            )
+            ):
                 lost_point += 40
             if modules[row + 10][col]:
                 try:
@@ -691,7 +694,7 @@ def _lost_point_level3(modules, modules_count):
 
 def _lost_point_level4(modules, modules_count):
     dark_count = sum(map(sum, modules))
-    percent = float(dark_count) / (modules_count**2)
+    percent = float(dark_count) / (modules_count ** 2)
     # Every 5% departure from 50%, rating++
     rating = int(abs(percent * 100 - 50) / 5)
     return rating * 10
@@ -703,10 +706,10 @@ def optimal_data_chunks(data, minimum=4):
     :param minimum: The minimum number of bytes in a row to split as a chunk.
     """
     data = to_bytestring(data)
-    num_pattern = re.compile(b'\d?'*minimum)
+    num_pattern = re.compile(b'\d?' * minimum)
     num_bits = _optimal_split(data, num_pattern)
-    alpha_pattern = re.compile( b"("+
-        (b'[' + ALPHA_NUM + b']?') * minimum + b")")
+    alpha_pattern = re.compile(b"(" +
+                               (b'[' + ALPHA_NUM + b']?') * minimum + b")")
     for is_num, chunk in num_bits:
         if is_num:
             yield QRData(chunk, mode=MODE_NUMBER, check_data=False)
@@ -721,14 +724,14 @@ def optimal_data_chunks(data, minimum=4):
 
 def _optimal_split(data, pattern):
     while data:
-        #match = re.search(pattern), data)
+        # match = re.search(pattern), data)
         match = pattern.search(data)
         if not match:
             break
         matched = match.group(0)
         start = data.rfind(matched)
         end = len(matched) + start
-        #start, end = match.start(), match.end()
+        # start, end = match.start(), match.end()
         if start:
             yield False, data[:start]
         yield True, data[start:end]
@@ -907,7 +910,6 @@ def create_bytes(buffer, rs_blocks):
 
 
 def create_data(version, error_correction, data_list):
-
     buffer = BitBuffer()
     for data in data_list:
         buffer.put(data.mode, 4)
@@ -951,6 +953,7 @@ Main
 Formerly in main.py
 """
 
+
 def make(data=None, **kwargs):
     qr = QRCode(**kwargs)
     qr.add_data(data)
@@ -978,6 +981,7 @@ def _check_mask_pattern(mask_pattern):
     if mask_pattern < 0 or mask_pattern > 7:
         raise ValueError(
             "Mask pattern should be in range(8) (got %s)" % mask_pattern)
+
 
 class QRCode:
 
@@ -1046,7 +1050,7 @@ class QRCode:
             self.modules[row] = [None] * self.modules_count
 
             for col in range(self.modules_count):
-                self.modules[row][col] = None   # (col + row) % 3
+                self.modules[row][col] = None  # (col + row) % 3
 
         self.setup_position_probe_pattern(0, 0)
         self.setup_position_probe_pattern(self.modules_count - 7, 0)
@@ -1133,7 +1137,6 @@ class QRCode:
                 pattern = i
 
         return pattern
-
 
     def setup_timing_pattern(self):
         for r in range(8, self.modules_count - 8):
@@ -1226,7 +1229,7 @@ class QRCode:
             if col <= 6:
                 col -= 1
 
-            col_range = (col, col-1)
+            col_range = (col, col - 1)
 
             while True:
 
@@ -1267,12 +1270,12 @@ class QRCode:
         if not self.border:
             return self.modules
 
-        width = len(self.modules) + self.border*2
-        code = [[False]*width] * self.border
-        x_border = [False]*self.border
+        width = len(self.modules) + self.border * 2
+        code = [[False] * width] * self.border
+        x_border = [False] * self.border
         for module in self.modules:
             code.append(x_border + module + x_border)
-        code += [[False]*width] * self.border
+        code += [[False] * width] * self.border
 
         return code
 
