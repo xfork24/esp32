@@ -1,8 +1,9 @@
-from led import blink
+from led import blink, pwm
 
 
 def main():
-    blink(2, 5)
+    blink()
+    pwm()
 
 
 if __name__ == '__main__':
