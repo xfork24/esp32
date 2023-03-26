@@ -116,12 +116,16 @@ jingle = [
     F7, F7, F7, F7, F7, E7, E7, E7, G7, G7, F7, D7, C7, 0
 ]
 
+buz = None
+buzz = None
 
-class Buzzer:
+
+class _Buzzer:
     def __init__(self, port):
         self.pwm = PWM(Pin(port, Pin.OUT))
+        self.pwm.duty(0)
 
-    def play(self, wait, duty, melody=None):
+    def play(self, wait=200, duty=512, melody=None):
         melody = jingle if melody is None else melody
         for note in melody:
             if note > 0:
@@ -132,9 +136,17 @@ class Buzzer:
             time.sleep_ms(wait)
         self.pwm.duty(0)
 
+    def buz(self, duty=5, period=1):
+        self.pwm.duty(duty)
+        time.sleep(period)
+        self.pwm.duty(0)
 
-buz = None
-buzzer = None
+
+def create_buzzer(port=26):
+    global buzz
+    if buzz is None:
+        buzz = _Buzzer(port)
+    return buzz
 
 
 def play(port=15, freq=5, period=10, source=False, duty=512, melody=None):
@@ -149,7 +161,7 @@ def play(port=15, freq=5, period=10, source=False, duty=512, melody=None):
             time.sleep_ms(int(1000 / freq))
         buz.value(1)
     else:
-        global buzzer
-        if buzzer is None:
-            buzzer = Buzzer(port)
-        buzzer.play(int(1000 / freq), duty, melody)
+        global buzz
+        if buzz is None:
+            buzz = _Buzzer(port)
+        buzz.play(int(1000 / freq), duty, melody)

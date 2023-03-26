@@ -2,31 +2,31 @@ import time
 
 from machine import Pin, PWM
 
-rgb_inited = False
-pwm_led_r = None
-pwm_led_g = None
-pwm_led_b = None
+rgb = None
 
 
-def rgb(r=255, g=255, b=255, r_port=14, g_port=12, b_port=13, freq=1000):
-    global rgb_inited
-    global pwm_led_r
-    global pwm_led_g
-    global pwm_led_b
-    if not rgb_inited:
-        rgb_inited = True
-        led_r = Pin(r_port, Pin.OUT)
-        led_g = Pin(g_port, Pin.OUT)
-        led_b = Pin(b_port, Pin.OUT)
-        pwm_led_r = PWM(led_r)
-        pwm_led_g = PWM(led_g)
-        pwm_led_b = PWM(led_b)
-    pwm_led_r.freq(freq)
-    pwm_led_r.duty(int(r / 255 * 1023))
-    pwm_led_g.freq(freq)
-    pwm_led_g.duty(int(g / 255 * 1023))
-    pwm_led_b.freq(freq)
-    pwm_led_b.duty(int(b / 255 * 1023))
+class _RgbLed:
+    def __init__(self, r_port, g_port, b_port, freq):
+        self.pwm_led_r = PWM(Pin(r_port, Pin.OUT))
+        self.pwm_led_g = PWM(Pin(g_port, Pin.OUT))
+        self.pwm_led_b = PWM(Pin(b_port, Pin.OUT))
+        self.freq = freq
+        self.show(0, 0, 0)
+
+    def show(self, r, g, b):
+        self.pwm_led_r.freq(self.freq)
+        self.pwm_led_r.duty(int(r / 255 * 1023))
+        self.pwm_led_g.freq(self.freq)
+        self.pwm_led_g.duty(int(g / 255 * 1023))
+        self.pwm_led_b.freq(self.freq)
+        self.pwm_led_b.duty(int(b / 255 * 1023))
+
+
+def create_rgb_led(r_port=5, g_port=4, b_port=27, freq=1000):
+    global rgb
+    if rgb is None:
+        rgb = _RgbLed(r_port, g_port, b_port, freq)
+    return rgb
 
 
 def blink(port=2, freq=2, period=5):

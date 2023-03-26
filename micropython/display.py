@@ -22,21 +22,29 @@ def clean_lcd(lcd):
     lcd.lcd_backlight(False)
 
 
-def init_oled(width=128, height=64, res=21, dc=22, cs=23, clk=18, mosi=19, miso=15):  # d0 = clk, d1 = mosi
+class _Oled:
+    def __init__(self, width, height, res, dc, cs, clk, mosi, miso):  # d0 = clk, d1 = mosi
+        spi = SoftSPI(baudrate=500000, polarity=1, phase=0, sck=Pin(clk), mosi=Pin(mosi), miso=Pin(miso))
+        self.oled = SSD1306_SPI(width, height, spi, Pin(dc), Pin(res), Pin(cs))
+
+    def text(self, msg, x, y, show=False):
+        self.oled.text(msg, x, y)
+        if show:
+            self.oled.show()
+
+    def show():
+        self.oled.show()
+
+    def clear(self):
+        self.oled.fill(0)
+        self.oled.show()
+
+
+def create_oled(width=128, height=64, res=21, dc=22, cs=23, clk=18, mosi=19, miso=15):
     global oled
     if oled is None:
-        spi = SoftSPI(baudrate=500000, polarity=1, phase=0, sck=Pin(clk), mosi=Pin(mosi), miso=Pin(miso))
-        res_pin = Pin(res)
-        dc_pin = Pin(dc)
-        cs_pin = Pin(cs)
-        oled = SSD1306_SPI(width, height, spi, dc_pin, res_pin, cs_pin)
-        oled.fill(0)
+        oled = _Oled(width, height, res, dc, cs, clk, mosi, miso)
     return oled
-
-
-def clean_oled(oled):
-    oled.fill(0)
-    oled.show()
 
 
 def display_msg_in_lcd_and_oled(show_time=5):

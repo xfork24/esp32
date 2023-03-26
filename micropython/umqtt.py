@@ -1,6 +1,8 @@
 import usocket as socket
 import ustruct as struct
 
+mqtt_client = None
+
 
 class MQTTException(Exception):
     pass
@@ -213,3 +215,10 @@ class MQTTClient:
     def check_msg(self):
         self.sock.setblocking(False)
         return self.wait_msg()
+
+
+def create_mqtt_client(client_id='client', server='175.178.162.201', port=1883, user='admin', password='%uSIc849'):
+    global mqtt_client
+    if mqtt_client is None:
+        mqtt_client = MQTTClient(client_id, server, port, user, password)
+    return mqtt_client
