@@ -6,11 +6,11 @@ from buzzer import create_buzzer
 from connect import init_wifi
 from display import create_oled
 from led import create_rgb_led
+from mqtt import MQTTClient
 from sensor import read_aval
-from umqtt import MQTTClient
 
 BUZZER_IO_PORT = 26  # 14/15-cannot_play, 12-cannot_init
-SOIL_MOISTURE_SENSOR_AO_PORT = 13
+SOIL_MOISTURE_SENSOR_AO_PORT = 34  # 13/15-cannot_work_after_wifi_inited
 RGB_R_PORT = 5
 RGB_G_PORT = 4
 RGB_B_PORT = 27
@@ -46,7 +46,7 @@ def build_ha_conn_topics(sensor_name):
     config_topic = 'homeassistant/sensor/HA/HA-%s-%s/config' % (HA_DEVICE_NAME, sensor_name)
     state_topic = 'HA-%s/%s/state' % (HA_DEVICE_NAME, sensor_name)
     cmd_topic = 'HA-%s/%s/set' % (HA_DEVICE_NAME, sensor_name)
-    return config_topic.encode(), state_topic.encode(), cmd_topic.encode()
+    return config_topic, state_topic, cmd_topic
 
 
 def build_ha_register_body(sensor_name, sensor_type):
@@ -73,60 +73,59 @@ HA_SOIL_MOISTURE_REGISTER_BODY = build_ha_register_body('soil_moisture', 'soil_m
 
 
 def server_to_esp32_cb(topic, msg):
-    if topic.decode() == HA_SOIL_MOISTURE_CMD_TOPIC:
+    if topic == HA_SOIL_MOISTURE_CMD_TOPIC:
         oled.text(topic.decode, 0, 0)
         oled.text(msg, 0, 16, True)
 
 
 def mqtt_connect():
-    global mqttc
     print('before create mqttc')
-    mqttc = MQTTClient(MQTT_ESP32_CLIENT_NAME,
-                       MQTT_SERVER_IP, MQTT_SERVER_PORT,
-                       MQTT_SERVER_USER, MQTT_SERVER_PASSWD)
-    mqttc.set_callback(server_to_esp32_cb)
+    client = MQTTClient(MQTT_SERVER_IP, MQTT_SERVER_PORT)
+    client.set_message_callback(server_to_esp32_cb)
     print('before mqtt connect')
-    mqttc.connect()
+    client.connect(MQTT_ESP32_CLIENT_NAME, MQTT_SERVER_USER, MQTT_SERVER_PASSWD)
+    time.sleep(0.5)
     print('after mqtt connect')
-    mqttc.subscribe(HA_SOIL_MOISTURE_CMD_TOPIC)
-    return mqttc
+    client.subscribe(HA_SOIL_MOISTURE_CMD_TOPIC)
+    return client
 
 
 def init_rgb():
-    global rgb
-    if rgb is None:
-        rgb = create_rgb_led(RGB_R_PORT, RGB_G_PORT, RGB_B_PORT)
+    rgb = create_rgb_led(RGB_R_PORT, RGB_G_PORT, RGB_B_PORT)
     return rgb
 
 
-def init_peripherals():
-    global buzz, oled
+def init_buzz():
     print('before init buzz')
-    if buzz is None:
-        buzz = create_buzzer(BUZZER_IO_PORT)
+    buzz = create_buzzer(BUZZER_IO_PORT)
+    return buzz
+
+def init_oled():
     print('before init oled')
-    if oled is None:
-        oled = create_oled(OLED_WIDTH, OLED_HEIGHT,
-                           OLED_RES_PORT, OLED_DC_PORT, OLED_CS_PORT, OLED_CLK_PORT, OLED_MOSI_PORT, OLED_MISO_PORT)
-    return buzz, oled
+    oled = create_oled(OLED_WIDTH, OLED_HEIGHT,
+                       OLED_RES_PORT, OLED_DC_PORT, OLED_CS_PORT, OLED_CLK_PORT, OLED_MOSI_PORT, OLED_MISO_PORT)
+    return oled
 
 
 def main():
-    global mqttc, wifi
+    global mqttc, wifi, rgb, buzz, oled
 
-    init_rgb()
+    rgb = init_rgb()
     wifi = init_wifi(WIFI_ESSID, WIFI_PASSWD)
-    init_peripherals()
+    buzz = init_buzz()
+    oled = init_oled()
 
     mqttc = mqtt_connect()
+    print('before mqtt publish')
     mqttc.publish(HA_SOIL_MOISTURE_CFG_TOPIC, HA_SOIL_MOISTURE_REGISTER_BODY)
 
     print('before loop')
     while True:
         print(read_aval(SOIL_MOISTURE_SENSOR_AO_PORT))
-        mqttc.publish(HA_SOIL_MOISTURE_STATE_TOPIC, read_aval(SOIL_MOISTURE_SENSOR_AO_PORT))
+        mqttc.publish(HA_SOIL_MOISTURE_STATE_TOPIC, str(read_aval(SOIL_MOISTURE_SENSOR_AO_PORT)))
         time.sleep(1)
 
 
 if __name__ == '__main__':
     main()
+
