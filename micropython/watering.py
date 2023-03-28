@@ -1,7 +1,7 @@
 import time
 
 import ujson
-from machine import Pin
+from machine import Pin, Timer
 
 from buzzer import create_buzzer
 from connect import init_wifi
@@ -35,6 +35,7 @@ HA_DEVICE_NAME = 'esp32_garden_helper'
 HA_DEVICE_MANUFACTURER = 'xfork.tech'
 HA_DEVICE_MODEL = 'HA'
 HA_DEVICE_SW_VERSION = '1.0'
+WATER_PERIOD = 5
 
 rgb = None
 buzz = None
@@ -47,14 +48,16 @@ wifi = None
 auto_mode = True
 timer_mode = True
 sensor_mode = False
-water_plants = False
+manual_status = False
+water_status = False
+auto_trigger = True
 
-timer_threshold = 86400
+timer_threshold = 10
 timer_last_watering_time = time.time()
 
-sensor_low_threshold = 10
+sensor_low_threshold = 20
 sensor_high_threshold = 50
-sensor_value_threshold = 10
+sensor_value_count_threshold = 10
 sensor_value_counter = 0
 
 
@@ -102,27 +105,44 @@ HA_WATER_PLANTS_CFG_TOPIC, HA_WATER_PLANTS_STATE_TOPIC, HA_WATER_PLANTS_CMD_TOPI
                                                                                                          'switch')
 HA_WATER_PLANTS_REGISTER_BODY = build_ha_register_body('water_plants', 'water_plants')
 
+HA_WATER_STATUS_CFG_TOPIC, HA_WATER_STATUS_STATE_TOPIC, HA_WATER_STATUS_CMD_TOPIC = build_ha_conn_topics('water_status',
+                                                                                                         'switch')
+HA_WATER_STATUS_REGISTER_BODY = build_ha_register_body('water_status', 'water_status')
+
+
+def switch_water_status(on=True, auto=True):
+    global water_status, timer_last_watering_time, auto_trigger, sensor_value_counter
+    if on and water_status and not auto:
+        print('watering already in progress, ignore command')
+        mqttc.publish(HA_WATER_PLANTS_STATE_TOPIC, 'OFF')
+        return
+    switch = 'ON' if on else 'OFF'
+    print('%s %s water plants' % ('begin' if on else 'end', 'auto' if auto else 'manual'))
+    auto_trigger = auto
+    water_status = on
+    wctl.value(1 if on else 0)
+    mqttc.publish(HA_WATER_STATUS_STATE_TOPIC, switch)
+    if not auto:
+        mqttc.publish(HA_WATER_PLANTS_STATE_TOPIC, switch)
+    timer_last_watering_time = time.time()
+    sensor_value_counter = 0
+    if on:
+        tim0 = Timer(0)
+        tim0.init(period=WATER_PERIOD * 1000, mode=Timer.ONE_SHOT, callback=watering_timer)
+
+
+def watering_timer(t):
+    print('in watering timer', t)
+    switch_water_status(False, auto_trigger)
+
 
 def server_to_esp32_cb(topic, msg):
-    global auto_mode, timer_mode, sensor_mode, water_plants
+    global auto_mode, timer_mode, sensor_mode, water_status
     topic_str = topic.decode()
     msg_str = msg.decode()
     print(topic_str, msg_str)
-    if topic_str == HA_SOIL_MOISTURE_CMD_TOPIC:
-        oled.text(topic_str, 0, 0)
-        oled.text(msg_str, 0, 16, True)
-    elif topic_str == HA_WATER_PLANTS_CMD_TOPIC:
-        if water_plants:
-            return
-        water_plants = True
-        wctl.value(1)
-        print('begin water plants')
-        mqttc.publish(HA_WATER_PLANTS_STATE_TOPIC, 'ON')
-        time.sleep(5)
-        water_plants = False
-        wctl.value(0)
-        print('end water plants')
-        mqttc.publish(HA_WATER_PLANTS_STATE_TOPIC, 'OFF')
+    if topic_str == HA_WATER_PLANTS_CMD_TOPIC:
+        switch_water_status(True, False)
     else:
         if topic_str == HA_AUTO_MODE_CMD_TOPIC:
             auto_mode = True if msg_str == 'ON' else False
@@ -160,9 +180,8 @@ def mqtt_connect():
     client.set_message_callback(server_to_esp32_cb)
     print('before mqtt connect')
     client.connect(MQTT_ESP32_CLIENT_NAME, MQTT_SERVER_USER, MQTT_SERVER_PASSWD)
-    time.sleep(0.5)
+    time.sleep(5)
     print('after mqtt connect')
-    client.subscribe(HA_SOIL_MOISTURE_CMD_TOPIC)
     client.subscribe(HA_AUTO_MODE_CMD_TOPIC)
     client.subscribe(HA_TIMER_MODE_CMD_TOPIC)
     client.subscribe(HA_SENSOR_MODE_CMD_TOPIC)
@@ -171,25 +190,44 @@ def mqtt_connect():
 
 
 def init_rgb():
-    rgb = create_rgb_led(RGB_R_PORT, RGB_G_PORT, RGB_B_PORT)
-    return rgb
+    c = create_rgb_led(RGB_R_PORT, RGB_G_PORT, RGB_B_PORT)
+    return c
 
 
 def init_buzz():
     print('before init buzz')
-    buzz = create_buzzer(BUZZER_IO_PORT)
-    return buzz
+    c = create_buzzer(BUZZER_IO_PORT)
+    return c
 
 
 def init_oled():
     print('before init oled')
-    oled = create_oled(OLED_WIDTH, OLED_HEIGHT,
-                       OLED_RES_PORT, OLED_DC_PORT, OLED_CS_PORT, OLED_CLK_PORT, OLED_MOSI_PORT, OLED_MISO_PORT)
-    return oled
+    c = create_oled(OLED_WIDTH, OLED_HEIGHT,
+                    OLED_RES_PORT, OLED_DC_PORT, OLED_CS_PORT, OLED_CLK_PORT, OLED_MOSI_PORT, OLED_MISO_PORT)
+    return c
 
 
-def handle_watering():
-    pass
+def handle_auto_watering(soil_moisture):
+    global sensor_value_counter, timer_last_watering_time, water_status
+    if water_status:
+        return
+    if not auto_mode:
+        sensor_value_counter = 0
+        timer_last_watering_time = time.time()
+        return
+    if sensor_mode:
+        if sensor_low_threshold < soil_moisture < sensor_high_threshold:
+            sensor_value_counter = 0
+        if soil_moisture < sensor_low_threshold:
+            sensor_value_counter += 1
+        if sensor_value_counter > sensor_value_count_threshold:
+            switch_water_status(True, True)
+    elif timer_mode:
+        timestamp = time.time()
+        if timestamp - timer_last_watering_time > timer_threshold:
+            switch_water_status(True, True)
+    else:
+        pass
 
 
 def main():
@@ -207,17 +245,21 @@ def main():
     mqttc.publish(HA_TIMER_MODE_CFG_TOPIC, HA_TIMER_MODE_REGISTER_BODY)
     mqttc.publish(HA_SENSOR_MODE_CFG_TOPIC, HA_SENSOR_MODE_REGISTER_BODY)
     mqttc.publish(HA_WATER_PLANTS_CFG_TOPIC, HA_WATER_PLANTS_REGISTER_BODY)
+    mqttc.publish(HA_WATER_STATUS_CFG_TOPIC, HA_WATER_STATUS_REGISTER_BODY)
 
     mqttc.publish(HA_AUTO_MODE_STATE_TOPIC, 'ON' if auto_mode else 'OFF')
     mqttc.publish(HA_TIMER_MODE_STATE_TOPIC, 'ON' if timer_mode else 'OFF')
     mqttc.publish(HA_SENSOR_MODE_STATE_TOPIC, 'ON' if sensor_mode else 'OFF')
-    mqttc.publish(HA_WATER_PLANTS_STATE_TOPIC, 'ON' if sensor_mode else 'OFF')
+    mqttc.publish(HA_WATER_PLANTS_STATE_TOPIC, 'ON' if manual_status else 'OFF')
+    mqttc.publish(HA_WATER_STATUS_STATE_TOPIC, 'ON' if water_status else 'OFF')
 
     print('before loop')
     while True:
         print(read_aval(SOIL_MOISTURE_SENSOR_AO_PORT))
-        mqttc.publish(HA_SOIL_MOISTURE_STATE_TOPIC, str(read_aval(SOIL_MOISTURE_SENSOR_AO_PORT)))
-        handle_watering()
+        soil_moisture = read_aval(SOIL_MOISTURE_SENSOR_AO_PORT)
+        mqttc.publish(HA_SOIL_MOISTURE_STATE_TOPIC, str(soil_moisture))
+        mqttc.publish(HA_WATER_STATUS_STATE_TOPIC, 'ON' if water_status else 'OFF')
+        handle_auto_watering(soil_moisture)
         time.sleep(1)
 
 
