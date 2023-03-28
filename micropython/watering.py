@@ -1,7 +1,7 @@
 import time
 
 import ujson
-from machine import Pin, Timer
+from machine import Pin, Timer, WDT
 
 from buzzer import create_buzzer
 from connect import init_wifi
@@ -36,6 +36,7 @@ HA_DEVICE_MANUFACTURER = 'xfork.tech'
 HA_DEVICE_MODEL = 'HA'
 HA_DEVICE_SW_VERSION = '1.0'
 WATER_PERIOD = 5
+WD_THRESHOLD = 30000
 
 rgb = None
 buzz = None
@@ -233,6 +234,7 @@ def handle_auto_watering(soil_moisture):
 def main():
     global mqttc, wifi, rgb, buzz, oled
 
+    wdt = WDT(timeout=WD_THRESHOLD)
     rgb = init_rgb()
     wifi = init_wifi(WIFI_ESSID, WIFI_PASSWD)
     buzz = init_buzz()
@@ -260,6 +262,7 @@ def main():
         mqttc.publish(HA_SOIL_MOISTURE_STATE_TOPIC, str(soil_moisture))
         mqttc.publish(HA_WATER_STATUS_STATE_TOPIC, 'ON' if water_status else 'OFF')
         handle_auto_watering(soil_moisture)
+        wdt.feed()
         time.sleep(1)
 
 
