@@ -1,0 +1,60 @@
+type: gauge
+entity: sensor.soil_moisture
+name: 土壤湿度
+min: 0
+max: 100
+needle: true
+severity:
+  green: 10
+  yellow: 60
+  red: 0
+
+
+
+
+
+type: entities
+entities:
+  - entity: switch.auto_mode
+    name: 自动浇花
+    icon: mdi:refresh-auto
+  - entity: switch.timer_mode
+    name: 定时
+    icon: mdi:timer
+  - entity: switch.sensor_mode
+    name: 湿度控制
+    icon: mdi:thermometer-water
+show_header_toggle: false
+state_color: true
+
+
+
+
+
+
+
+
+type: entities
+entities:
+  - entity: switch.water_status
+    name: 是否正在浇水
+    icon: mdi:water
+state_color: true
+
+
+
+
+
+
+
+
+show_name: true
+show_icon: true
+type: button
+entity: switch.water_plants
+icon: mdi:water
+name: 立即浇水
+show_state: false
+hold_action:
+  action: none
+
